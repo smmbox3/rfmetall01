@@ -1,6 +1,8 @@
 import React from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
+import TrustedCompanies from './components/TrustedCompanies';
+import ProductsSection from './components/ProductsSection';
 import Features from './components/Features';
 import Calculator from './components/Calculator';
 import About from './components/About';
@@ -15,6 +17,8 @@ function App() {
       <div className="min-h-screen bg-white">
         <Header />
         <Hero />
+        <TrustedCompanies />
+        <ProductsSection />
         <Features />
         <Calculator />
         <About />

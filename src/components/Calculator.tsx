@@ -35,7 +35,7 @@ const MetalCalculator: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedBranch, setSelectedBranch] = useState<string>('');
   const [selectedSteel, setSelectedSteel] = useState<string>('');
-  const [selectedSize, setSelectedSize] = useState<string>('');
+  const [selectedDiameter, setSelectedDiameter] = useState<string>('');
   const [selectedItem, setSelectedItem] = useState<PriceItem | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -49,14 +49,14 @@ const MetalCalculator: React.FC = () => {
   const branches = getBranches();
   const steelGrades = getSteelGrades();
   const [filteredItems, setFilteredItems] = useState<PriceItem[]>([]);
-  const [availableSizes, setAvailableSizes] = useState<string[]>([]);
+  const [availableDiameters, setAvailableDiameters] = useState<string[]>([]);
 
   useEffect(() => {
     const filters = {
       category: selectedCategory || undefined,
       branch: selectedBranch || undefined,
       steel: selectedSteel || undefined,
-      size: selectedSize || undefined,
+      size: selectedDiameter || undefined,
       search: searchQuery || undefined
     };
 
@@ -64,14 +64,14 @@ const MetalCalculator: React.FC = () => {
     setFilteredItems(filtered);
     setCurrentPage(1);
 
-    // Обновляем доступные размеры
+    // Обновляем доступные диаметры
     if (selectedCategory) {
       const categoryItems = filterItems({ category: selectedCategory });
-      setAvailableSizes([...new Set(categoryItems.map(item => item.size))].sort());
+      setAvailableDiameters([...new Set(categoryItems.map(item => item.size))].sort());
     } else {
-      setAvailableSizes([]);
+      setAvailableDiameters([]);
     }
-  }, [selectedCategory, selectedBranch, selectedSteel, selectedSize, searchQuery]);
+  }, [selectedCategory, selectedBranch, selectedSteel, selectedDiameter, searchQuery]);
 
   useEffect(() => {
     if (selectedItem && quantity > 0) {
@@ -119,7 +119,10 @@ const MetalCalculator: React.FC = () => {
         quantity: calculatorResult.quantity,
         totalWeight: calculatorResult.totalWeight,
         totalPrice: calculatorResult.totalPriceTenge,
-        priceCategory: calculatorResult.priceCategory
+        priceCategory: calculatorResult.priceCategory,
+        branch: calculatorResult.selectedItem.branch,
+        diameter: calculatorResult.selectedItem.size,
+        steel: calculatorResult.selectedItem.steel
       });
     }
   };
@@ -128,7 +131,7 @@ const MetalCalculator: React.FC = () => {
     setSelectedCategory('');
     setSelectedBranch('');
     setSelectedSteel('');
-    setSelectedSize('');
+    setSelectedDiameter('');
     setSearchQuery('');
     setSelectedItem(null);
   };
@@ -252,10 +255,86 @@ const MetalCalculator: React.FC = () => {
             
             {showFilters && (
               <div className="space-y-6 lg:space-y-8">
+                {/* Dropdown Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Филиал */}
+                  <div>
+                    <label className="block text-lg font-bold text-gray-900 mb-3">Выбор филиала:</label>
+                    <div className="relative">
+                      <select
+                        value={selectedBranch}
+                        onChange={(e) => setSelectedBranch(e.target.value)}
+                        className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-500/50 focus:border-blue-500 text-lg font-medium appearance-none bg-white"
+                      >
+                        <option value="">Все филиалы</option>
+                        {branches.map((branch) => (
+                          <option key={branch} value={branch}>{branch}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Диаметр */}
+                  <div>
+                    <label className="block text-lg font-bold text-gray-900 mb-3">Выбор диаметра:</label>
+                    <div className="relative">
+                      <select
+                        value={selectedDiameter}
+                        onChange={(e) => setSelectedDiameter(e.target.value)}
+                        className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-500/50 focus:border-blue-500 text-lg font-medium appearance-none bg-white"
+                        disabled={!selectedCategory}
+                      >
+                        <option value="">Все диаметры</option>
+                        {availableDiameters.map((diameter) => (
+                          <option key={diameter} value={diameter}>{diameter}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Марка стали */}
+                  <div>
+                    <label className="block text-lg font-bold text-gray-900 mb-3">Марка стали:</label>
+                    <div className="relative">
+                      <select
+                        value={selectedSteel}
+                        onChange={(e) => setSelectedSteel(e.target.value)}
+                        className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-500/50 focus:border-blue-500 text-lg font-medium appearance-none bg-white"
+                      >
+                        <option value="">Все марки</option>
+                        {steelGrades.map((steel) => (
+                          <option key={steel} value={steel}>{steel}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Заказ звонка */}
+                  <div>
+                    <label className="block text-lg font-bold text-gray-900 mb-3">Нужна помощь?</label>
+                    <button
+                      onClick={() => openModal('Консультация по выбору металлопроката', {
+                        selectedFilters: {
+                          branch: selectedBranch,
+                          diameter: selectedDiameter,
+                          steel: selectedSteel,
+                          category: selectedCategory
+                        }
+                      })}
+                      className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white p-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
+                    >
+                      📞 Заказать звонок
+                    </button>
+                  </div>
+                </div>
+
                 {/* Category Filter */}
                 <div>
                   <h4 className="text-lg lg:text-xl font-bold text-gray-900 mb-4">Категория:</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <button
                       onClick={() => setSelectedCategory('')}
                       className={`p-4 lg:p-6 rounded-2xl border-2 transition-all duration-300 ${
@@ -288,98 +367,6 @@ const MetalCalculator: React.FC = () => {
                     })}
                   </div>
                 </div>
-
-                {/* Branch Filter */}
-                <div>
-                  <h4 className="text-lg lg:text-xl font-bold text-gray-900 mb-4">Филиал:</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-                    <button
-                      onClick={() => setSelectedBranch('')}
-                      className={`p-3 lg:p-4 rounded-xl border-2 transition-all font-semibold text-sm lg:text-base ${
-                        selectedBranch === ''
-                          ? 'border-gray-500 bg-gray-500 text-white'
-                          : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                      }`}
-                    >
-                      Все филиалы
-                    </button>
-                    {branches.map((branch) => (
-                      <button
-                        key={branch}
-                        onClick={() => setSelectedBranch(branch)}
-                        className={`p-3 lg:p-4 rounded-xl border-2 transition-all font-semibold text-sm lg:text-base ${
-                          selectedBranch === branch
-                            ? 'border-blue-500 bg-blue-500 text-white'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-blue-300'
-                        }`}
-                      >
-                        {branch}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Steel Grade Filter */}
-                <div>
-                  <h4 className="text-lg lg:text-xl font-bold text-gray-900 mb-4">Марка стали:</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-                    <button
-                      onClick={() => setSelectedSteel('')}
-                      className={`p-3 lg:p-4 rounded-xl border-2 transition-all font-semibold text-sm lg:text-base ${
-                        selectedSteel === ''
-                          ? 'border-gray-500 bg-gray-500 text-white'
-                          : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                      }`}
-                    >
-                      Все марки
-                    </button>
-                    {steelGrades.map((steel) => (
-                      <button
-                        key={steel}
-                        onClick={() => setSelectedSteel(steel)}
-                        className={`p-3 lg:p-4 rounded-xl border-2 transition-all font-semibold text-sm lg:text-base ${
-                          selectedSteel === steel
-                            ? 'border-green-500 bg-green-500 text-white'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-green-300'
-                        }`}
-                      >
-                        {steel}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Size Filter */}
-                {selectedCategory && availableSizes.length > 0 && (
-                  <div>
-                    <h4 className="text-lg lg:text-xl font-bold text-gray-900 mb-4">Размер:</h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-                      <button
-                        onClick={() => setSelectedSize('')}
-                        className={`p-3 lg:p-4 rounded-xl border-2 transition-all font-semibold text-sm lg:text-base ${
-                          selectedSize === ''
-                            ? 'border-gray-500 bg-gray-500 text-white'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                        }`}
-                      >
-                        Все размеры
-                      </button>
-                      {availableSizes.map((size) => (
-                        <button
-                          key={size}
-                          onClick={() => setSelectedSize(size)}
-                          className={`p-3 lg:p-4 rounded-xl border-2 transition-all font-semibold text-sm lg:text-base ${
-                            selectedSize === size
-                              ? 'border-orange-500 bg-orange-500 text-white'
-                              : 'border-gray-300 bg-white text-gray-700 hover:border-orange-300'
-                          }`}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -721,7 +708,7 @@ const MetalCalculator: React.FC = () => {
                   <p className="text-base lg:text-lg text-gray-700 font-medium">
                     ⚡ <strong>Цены актуальны на сегодня!</strong> Курс: {EXCHANGE_RATE} ₸/₽
                     <br />
-                    📞 Звоните прямо сейчас: <span className="font-bold text-blue-600 text-lg lg:text-xl">+7 (777) 777-77-77</span>
+                    📞 Звоните прямо сейчас: <span className="font-bold text-blue-600 text-lg lg:text-xl">+7 (747) 219-93-69</span>
                     <br />
                     🚚 Доставка по всему Казахстану • 💯 Гарантия качества
                   </p>

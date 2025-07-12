@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { X, Phone, User } from 'lucide-react';
+import { X, Phone, User, MessageSquare } from 'lucide-react';
 import { useCallModal } from '../contexts/CallModalContext';
 import { submitLead } from '../services/bitrixService';
 
 interface FormData {
   name: string;
   phone: string;
+  comment: string;
 }
 
 const CallModal: React.FC = () => {
-  const { isOpen, closeModal, formType } = useCallModal();
+  const { isOpen, closeModal, formType, productData } = useCallModal();
   const [formData, setFormData] = useState<FormData>({
     name: '',
-    phone: ''
+    phone: '',
+    comment: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -20,10 +22,33 @@ const CallModal: React.FC = () => {
 
   useEffect(() => {
     if (isOpen) {
-      setFormData({ name: '', phone: '' });
+      setFormData({ name: '', phone: '', comment: '' });
       setErrors({});
       setSubmitStatus('idle');
       document.body.style.overflow = 'hidden';
+
+      // Автозаполнение комментария на основе выбранных данных
+      if (productData) {
+        let autoComment = '';
+        
+        if (productData.item) {
+          autoComment += `Товар: ${productData.item.name} ${productData.item.size}\n`;
+          autoComment += `Количество: ${productData.quantity} шт.\n`;
+          autoComment += `Общий вес: ${productData.totalWeight?.toFixed(2)} т\n`;
+          autoComment += `Стоимость: ${Math.round(productData.totalPrice || 0).toLocaleString()} ₸\n`;
+          autoComment += `Филиал: ${productData.item.branch}\n`;
+        }
+        
+        if (productData.selectedFilters) {
+          autoComment += 'Выбранные фильтры:\n';
+          if (productData.selectedFilters.branch) autoComment += `Филиал: ${productData.selectedFilters.branch}\n`;
+          if (productData.selectedFilters.diameter) autoComment += `Диаметр: ${productData.selectedFilters.diameter}\n`;
+          if (productData.selectedFilters.steel) autoComment += `Марка стали: ${productData.selectedFilters.steel}\n`;
+          if (productData.selectedFilters.category) autoComment += `Категория: ${productData.selectedFilters.category}\n`;
+        }
+        
+        setFormData(prev => ({ ...prev, comment: autoComment }));
+      }
     } else {
       document.body.style.overflow = 'unset';
     }
@@ -31,7 +56,7 @@ const CallModal: React.FC = () => {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen]);
+  }, [isOpen, productData]);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<FormData> = {};
@@ -77,7 +102,8 @@ const CallModal: React.FC = () => {
         name: formData.name.trim(),
         phone: formatPhone(formData.phone.trim()),
         formType: formType,
-        comment: '',
+        comment: formData.comment.trim(),
+        productData: productData,
         source: 'Сайт АТЛАНТ МЕТАЛЛ',
         url: window.location.href,
         userAgent: navigator.userAgent,
@@ -142,7 +168,7 @@ const CallModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-3xl max-w-md w-full shadow-2xl transform transition-all border border-blue-400/30">
+      <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 rounded-3xl max-w-md w-full shadow-2xl transform transition-all border border-blue-400/30">
         {/* Header */}
         <div className="relative p-8 text-center">
           <button
@@ -152,11 +178,9 @@ const CallModal: React.FC = () => {
             <X className="h-6 w-6" />
           </button>
           
-          <h2 className="text-3xl font-bold text-white mb-4">Заказ звонка!</h2>
+          <h2 className="text-3xl font-bold text-white mb-4">Заказать звонок</h2>
           <p className="text-blue-100 text-lg">
-            Заполните форму и наш менеджер свяжется с вами
-            <br />
-            в течение 15 минут!
+            Оставьте заявку и мы перезвоним в течение 15 минут
           </p>
         </div>
 
@@ -206,15 +230,19 @@ const CallModal: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Name Field */}
               <div>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  className={`w-full px-6 py-4 bg-blue-800/50 border-2 rounded-xl text-white placeholder-blue-200 focus:ring-4 focus:ring-orange-500/50 transition-all text-lg ${
-                    errors.name ? 'border-red-400 focus:border-red-400' : 'border-orange-400 focus:border-orange-300'
-                  }`}
-                  placeholder="Имя"
-                />
+                <label className="block text-white font-semibold mb-2">Ваше имя *</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-300" />
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    className={`w-full pl-12 pr-4 py-4 bg-blue-800/50 border-2 rounded-xl text-white placeholder-blue-200 focus:ring-4 focus:ring-orange-500/50 transition-all text-lg ${
+                      errors.name ? 'border-red-400 focus:border-red-400' : 'border-orange-400 focus:border-orange-300'
+                    }`}
+                    placeholder="Введите ваше имя"
+                  />
+                </div>
                 {errors.name && (
                   <p className="text-red-300 text-sm mt-2">{errors.name}</p>
                 )}
@@ -222,25 +250,44 @@ const CallModal: React.FC = () => {
 
               {/* Phone Field */}
               <div>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
-                  className={`w-full px-6 py-4 bg-blue-800/50 border-2 rounded-xl text-white placeholder-blue-200 focus:ring-4 focus:ring-orange-500/50 transition-all text-lg ${
-                    errors.phone ? 'border-red-400 focus:border-red-400' : 'border-orange-400 focus:border-orange-300'
-                  }`}
-                  placeholder="Телефон"
-                />
+                <label className="block text-white font-semibold mb-2">Номер телефона *</label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-300" />
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    className={`w-full pl-12 pr-4 py-4 bg-blue-800/50 border-2 rounded-xl text-white placeholder-blue-200 focus:ring-4 focus:ring-orange-500/50 transition-all text-lg ${
+                      errors.phone ? 'border-red-400 focus:border-red-400' : 'border-orange-400 focus:border-orange-300'
+                    }`}
+                    placeholder="+7 (777) 777-77-77"
+                  />
+                </div>
                 {errors.phone && (
                   <p className="text-red-300 text-sm mt-2">{errors.phone}</p>
                 )}
+              </div>
+
+              {/* Comment Field */}
+              <div>
+                <label className="block text-white font-semibold mb-2">Комментарий</label>
+                <div className="relative">
+                  <MessageSquare className="absolute left-4 top-4 h-5 w-5 text-blue-300" />
+                  <textarea
+                    value={formData.comment}
+                    onChange={(e) => handleInputChange('comment', e.target.value)}
+                    rows={4}
+                    className="w-full pl-12 pr-4 py-4 bg-blue-800/50 border-2 border-orange-400 rounded-xl text-white placeholder-blue-200 focus:ring-4 focus:ring-orange-500/50 focus:border-orange-300 transition-all resize-none"
+                    placeholder="Дополнительная информация..."
+                  />
+                </div>
               </div>
 
               {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800 disabled:from-gray-600 disabled:to-gray-700 text-white py-4 rounded-xl font-bold text-xl transition-all disabled:cursor-not-allowed shadow-lg"
+                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-4 rounded-xl font-bold text-xl transition-all disabled:cursor-not-allowed shadow-lg"
               >
                 {isSubmitting ? (
                   <span className="flex items-center justify-center">
@@ -251,6 +298,11 @@ const CallModal: React.FC = () => {
                   'Заказать звонок'
                 )}
               </button>
+
+              {/* Privacy Notice */}
+              <p className="text-blue-200 text-sm text-center">
+                Нажимая кнопку, вы соглашаетесь с обработкой персональных данных и политикой конфиденциальности
+              </p>
             </form>
           )}
         </div>
